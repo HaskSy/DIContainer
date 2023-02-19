@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 public class DIContainer {
     private final Map<Class<?>, Object> instances = new HashMap<>();
 
-    public void scan(String packageToScan) throws ClassNotFoundException, IOException {
+    protected void scan(String packageToScan) throws ClassNotFoundException, IOException {
         // Scan the package for annotated classes
         Set<Class<?>> classes = ClasspathScanner.getClassesInPackage(packageToScan).stream()
                 .filter((Class<?> clazz) -> clazz.isAnnotationPresent(Component.class)).collect(Collectors.toSet());

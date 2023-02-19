@@ -10,7 +10,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 class ClasspathScanner {
-    public static Set<Class<?>> getClassesInPackage(String packageToScan) throws ClassNotFoundException, IOException {
+    protected static Set<Class<?>> getClassesInPackage(String packageToScan) throws ClassNotFoundException, IOException {
         Set<Class<?>> classes = new HashSet<>();
 
         String packagePath = packageToScan.replace('.', '/');
@@ -36,7 +36,7 @@ class ClasspathScanner {
                         String subPackageName = packageToScan + "." + file.getName();
                         scanForClasses(file, subPackageName, classes);
                     } else if (file.getName().endsWith(".class")) {
-                        String className = packageToScan + '.' + file.getName().substring(0, file.getName().length() - 6);
+                        String className = packageToScan + '.' + file.getName().substring(0, file.getName().lastIndexOf('.'));
                         Class<?> clazz = Class.forName(className);
                         classes.add(clazz);
                     }

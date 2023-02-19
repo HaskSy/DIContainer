@@ -2,23 +2,31 @@ package org.example.dicontainer;
 
 import org.example.dicontainer.annotations.Autowired;
 import org.example.dicontainer.annotations.Component;
+import org.example.dicontainer.dag.DAGNode;
+import org.example.dicontainer.dag.DAGraph;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class DIContainer {
     private final Map<Class<?>, Object> instances = new HashMap<>();
 
     public void scan(String packageToScan) throws ClassNotFoundException, IOException {
         // Scan the package for annotated classes
-        for (Class<?> clazz : ClasspathScanner.getClassesInPackage(packageToScan)) {
-            if (clazz.isAnnotationPresent(Component.class)) {
-                Object instance = createInstance(clazz);
-                this.instances.put(clazz, instance);
-            }
+        Set<Class<?>> classes = ClasspathScanner.getClassesInPackage(packageToScan).stream()
+                .filter((Class<?> clazz) -> clazz.isAnnotationPresent(Component.class)).collect(Collectors.toSet());
+
+        Deque<Class<?>> dependencyOrder = orderDependenciesResolve(classes);
+        while (!dependencyOrder.isEmpty()) {
+            Class<?> clazz = dependencyOrder.removeLast();
+            Object instance = createInstance(clazz);
+            this.instances.put(clazz, instance);
         }
     }
 
@@ -59,5 +67,20 @@ public class DIContainer {
             params[i] = getInstance(paramType);
         }
         return params;
+    }
+
+    private Deque<Class<?>> orderDependenciesResolve(Set<Class<?>> classes) {
+        DAGraph<Class<?>> dependencyGraph = new DAGraph<>();
+        for (Class<?> clazz : classes) {
+            DAGNode<Class<?>> from = DependencyFactory.createDependency(clazz);
+            dependencyGraph.addNode(from);
+            Constructor<?> constructor = findAutowiredConstructor(clazz);
+            Class<?>[] paramTypes = constructor.getParameterTypes();
+            for (Class<?> paramType : paramTypes) {
+                DAGNode<Class<?>> to = DependencyFactory.createDependency(paramType);
+                dependencyGraph.addEdge(from, to);
+            }
+        }
+        return dependencyGraph.getTopologicalOrder();
     }
 }
